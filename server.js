@@ -1,29 +1,26 @@
+require('dotenv').config();
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const { Client } = require('pg'); 
 const path = require('path');
 const fs = require('fs');
 
 const app = express();
 const PORT = 3002;
-const DB_PATH = path.join(__dirname, 'signers.db');
 const ALLOWED_SIGNERS_FILE = path.join(__dirname, 'allowedsigner.txt');
 
 let allowedSigners = {};
 
-// Function to create the SQLite database and tables if they do not exist
-const initializeDatabase = () => {
-  if (!fs.existsSync(DB_PATH)) {
-    const db = new sqlite3.Database(DB_PATH);
-    db.serialize(() => {
-      db.run(`CREATE TABLE IF NOT EXISTS signer (
-        signer_address TEXT PRIMARY KEY,
-        block_number INTEGER,
-        timestamp INTEGER
-      )`);
-    });
-    db.close();
-  }
-};
+// PostgreSQL connection configuration
+const client = new Client({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: parseInt(process.env.DB_PORT, 10),
+});
+
+// Connect to PostgreSQL
+client.connect();
 
 // Function to create the allowedsigner.txt file if it does not exist
 const initializeAllowedSignersFile = () => {
@@ -46,8 +43,7 @@ const loadAllowedSigners = () => {
   }
 };
 
-// Initialize database and files
-initializeDatabase();
+// Initialize files
 initializeAllowedSignersFile();
 
 // Load allowed signers initially
@@ -59,7 +55,7 @@ setInterval(loadAllowedSigners, 300000);
 // Check the signer information
 app.get('/checksigner', async (req, res) => {
   const signerAddress = req.query.address;
-  const errorAfter = parseInt(req.query.timeout || '45', 10) * 60 ; // Convert minutes to seconds
+  const errorAfter = parseInt(req.query.timeout || '45', 10) * 60; // Convert minutes to seconds
 
   if (!signerAddress) {
     return res.status(400).json({ error: 'address is required' });
@@ -88,14 +84,16 @@ app.get('/checksigner', async (req, res) => {
     }
   }
 
-  // Check timestamp validity in the database
-  const db = new sqlite3.Database(DB_PATH);
-  db.get('SELECT timestamp FROM signer WHERE signer_address = ?', [addressLower], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-    if (row) {
-      const lastTimestamp = row.timestamp;
+  // Check timestamp validity in the PostgreSQL database
+  try {
+    const result = await client.query(
+      'SELECT MAX(timestamp) AS lastTimestamp FROM block WHERE signer_address = $1',
+      [addressLower]
+    );
+
+    const row = result.rows[0];
+    if (row && row.lasttimestamp) {
+      const lastTimestamp = row.lasttimestamp;
       if (currentTime - lastTimestamp > errorAfter) {
         return res.status(400).json({
           status: 'error',
@@ -109,7 +107,10 @@ app.get('/checksigner', async (req, res) => {
         message: 'Signer address not found in database'
       });
     }
-  });
+  } catch (err) {
+    console.error('Database error:', err);
+    return res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Start the server
