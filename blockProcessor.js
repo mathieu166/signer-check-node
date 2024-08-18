@@ -13,7 +13,7 @@ const getMaxBlockNumber = async () => {
     const db = new sqlite3.Database(DB_PATH);
     db.get('SELECT MAX(block_number) AS maxBlockNumber FROM signer', (err, row) => {
       if (err) reject(err);
-      resolve(row.maxBlockNumber || 5134199);
+      resolve(row.maxBlockNumber);
     });
     db.close();
   });
@@ -75,7 +75,8 @@ const processBlocks = async () => {
   while (true) {
     try {
       const currentBlockNumber = await fetchBlockNumber();
-      const latestBlockProcessed = await getMaxBlockNumber();
+      const latestBlockProcessed = (await getMaxBlockNumber() || (currentBlockNumber - 500));
+      
       const maxBlockToProcess = currentBlockNumber - 10;
 
       if (maxBlockToProcess <= latestBlockProcessed) {
