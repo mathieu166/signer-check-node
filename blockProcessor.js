@@ -1,8 +1,6 @@
 require('dotenv').config(); // Load environment variables from .env file
 const axios = require('axios');
 const { Client } = require('pg'); // Import PostgreSQL client
-const fs = require('fs');
-const path = require('path');
 
 // PostgreSQL connection configuration from environment variables
 const client = new Client({
@@ -122,8 +120,13 @@ const processBlocks = async () => {
           gasPrice = await fetchGasPrice(); // Fetch the current gas price
       }
 
-      const currentBlockNumber = await fetchBlockNumber();
-      const latestBlockProcessed = await getMaxBlockNumber();
+      const currentBlockNumber = parseInt(await fetchBlockNumber(), 10);
+      const latestBlockProcessed = parseInt(await getMaxBlockNumber(), 10);
+
+      if (isNaN(currentBlockNumber) || isNaN(latestBlockProcessed)) {
+        throw new Error('Failed to parse block numbers');
+      }
+      
       const maxBlockToProcess = currentBlockNumber - 10;
 
       if (maxBlockToProcess <= latestBlockProcessed) {
