@@ -46,12 +46,16 @@ const processCsv = () => {
 	fs.createReadStream(CSV_FILE_PATH)
 		.pipe(csv())
 		.on('data', async (row) => {
+            if(!row || !row.block_number){
+                return;
+            }
+            
 			const blockNumber = parseInt(row.block_number, 10);
 
             if(MAX_BLOCK && parseInt(MAX_BLOCK, 10) < blockNumber ){
                 return;
             }
-            
+
 			const timestamp = parseInt(row.timestamp, 10);
 			const hash = row.hash;
 			const signerAddress = row.signer_address.toLowerCase();
