@@ -5,8 +5,8 @@ const path = require('path');
 
 const RPC_URL = process.env.RPC_URL || 'http://localhost:8545';
 const CSV_FILE_PATH = path.join(__dirname, 'blocks.csv');
-const START_BLOCK = 71;
-const WRITE_QTY=10;
+const START_BLOCK = 0;
+const WRITE_QTY=1000;
 // Fetch block info by block number
 const fetchBlockInfo = async (blockNumber) => {
 	try {
