@@ -1,5 +1,6 @@
 signers.db
 allowedsigner.txt
+blocks.csv
 
 # === Rules for `node_modules` ===
 !**/node_modules/**
