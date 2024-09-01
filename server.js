@@ -52,8 +52,7 @@ loadAllowedSigners();
 // Periodically reload allowed signers every 5 minutes
 setInterval(loadAllowedSigners, 300000);
 
-// Check the signer information
-app.get('/checksigner', async (req, res) => {
+app.get('/', async (req, res) => {
   const signerAddress = req.query.address;
   const errorAfter = parseInt(req.query.timeout || '45', 10) * 60; // Convert minutes to seconds
 
